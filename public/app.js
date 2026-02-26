@@ -6,6 +6,7 @@ const statusEl = document.getElementById('status');
 const refreshButton = document.getElementById('refresh');
 const userForm = document.getElementById('user-form');
 const menuForm = document.getElementById('menu-form');
+const REFRESH_INTERVAL_MS = 10000;
 
 async function fetchJson(url) {
   const response = await fetch(url);
@@ -179,4 +180,4 @@ menuForm.addEventListener('submit', async event => {
 refreshButton.addEventListener('click', refreshAll);
 
 refreshAll();
-setInterval(refreshAll, 10000);
+setInterval(refreshAll, REFRESH_INTERVAL_MS);

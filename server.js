@@ -4,6 +4,7 @@ const path = require('path');
 
 const dataFile = path.join(__dirname, 'data.json');
 const publicDir = path.join(__dirname, 'public');
+const MAX_PAYLOAD_SIZE = 1e6;
 
 const defaultData = {
   users: [],
@@ -56,7 +57,7 @@ function sendText(res, statusCode, message) {
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
     const contentLength = Number(req.headers['content-length']);
-    if (Number.isFinite(contentLength) && contentLength > 1e6) {
+    if (Number.isFinite(contentLength) && contentLength > MAX_PAYLOAD_SIZE) {
       const error = new Error('Payload too large');
       error.statusCode = 413;
       reject(error);
@@ -66,7 +67,7 @@ function parseJsonBody(req) {
     let body = '';
     req.on('data', chunk => {
       body += chunk;
-      if (body.length > 1e6) {
+      if (body.length > MAX_PAYLOAD_SIZE) {
         const error = new Error('Payload too large');
         error.statusCode = 413;
         reject(error);
@@ -184,9 +185,9 @@ function handleMenus(req, res) {
     parseJsonBody(req)
       .then(body => {
         const name = isNonEmptyString(body.name) ? body.name.trim() : null;
-        const price = toNumber(body.price, null);
-        const quantity = toNumber(body.quantity, null);
-        if (!name || price === null || quantity === null) {
+        const price = Number(body.price);
+        const quantity = Number(body.quantity);
+        if (!name || !Number.isFinite(price) || !Number.isFinite(quantity)) {
           sendJson(res, 400, { error: 'name, price, and quantity are required' });
           return;
         }

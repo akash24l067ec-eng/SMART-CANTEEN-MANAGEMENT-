@@ -39,6 +39,7 @@ Upload `arduino/SmartCanteen.ino` to the Arduino board. The sketch expects:
 - MFRC522 RFID reader
 - ESP-01 connected over Serial for UID verification and order placement
 - Two LEDs (access granted/denied) and a buzzer
+- Serial baud rate set to 115200 to match the ESP-01
 
 The Arduino code sends the following line-based commands to the ESP-01:
 
