@@ -81,6 +81,7 @@ function parseJsonBody(req) {
         error.statusCode = 413;
         reject(error);
         req.destroy();
+        return;
       }
       chunks.push(chunk);
     });
