@@ -6,7 +6,7 @@ const statusEl = document.getElementById('status');
 const refreshButton = document.getElementById('refresh');
 const userForm = document.getElementById('user-form');
 const menuForm = document.getElementById('menu-form');
-const REFRESH_INTERVAL_MS = 10000;
+const REFRESH_INTERVAL_MS = Number(document.body.dataset.refreshInterval) || 10000;
 ordersContainer.setAttribute('role', 'status');
 ordersContainer.setAttribute('aria-live', 'polite');
 

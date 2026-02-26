@@ -47,6 +47,7 @@ constexpr int MENU_COUNT = sizeof(menuItems) / sizeof(menuItems[0]);
 constexpr int MAX_CART_SIZE = 6;
 constexpr int MAX_QTY_DIGITS = 2;
 constexpr unsigned long FEEDBACK_DELAY_MS = 1200;
+constexpr int UID_HEX_SEGMENT_SIZE = 3;
 
 struct CartItem {
   int menuIndex;
@@ -132,8 +133,8 @@ void checkForCard() {
     return;
   }
   String uid = "";
-  int reserveSize = rfid.uid.size > 0 ? rfid.uid.size * 3 - 1 : 0;
-  // 2 hex chars + 1 colon separator per byte, minus 1 for no trailing colon.
+  int reserveSize =
+      rfid.uid.size > 0 ? rfid.uid.size * UID_HEX_SEGMENT_SIZE - 1 : 0;
   uid.reserve(reserveSize);
   for (byte i = 0; i < rfid.uid.size; i++) {
     if (i > 0) {

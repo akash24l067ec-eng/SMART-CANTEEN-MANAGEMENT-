@@ -77,11 +77,11 @@ function parseJsonBody(req) {
     req.on('data', chunk => {
       size += chunk.length;
       if (size > MAX_PAYLOAD_SIZE) {
+        chunks.length = 0;
         const error = new Error('Payload too large');
         error.statusCode = 413;
         reject(error);
         req.destroy();
-        chunks.length = 0;
         return;
       }
       chunks.push(chunk);
