@@ -131,6 +131,7 @@ void checkForCard() {
     return;
   }
   String uid = "";
+  uid.reserve(rfid.uid.size * 3);
   for (byte i = 0; i < rfid.uid.size; i++) {
     if (i > 0) {
       uid += ":";

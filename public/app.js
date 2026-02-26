@@ -7,6 +7,8 @@ const refreshButton = document.getElementById('refresh');
 const userForm = document.getElementById('user-form');
 const menuForm = document.getElementById('menu-form');
 const REFRESH_INTERVAL_MS = 10000;
+ordersContainer.setAttribute('role', 'status');
+ordersContainer.setAttribute('aria-live', 'polite');
 
 async function fetchJson(url) {
   const response = await fetch(url);
@@ -34,20 +36,24 @@ function setStatus(message, isError = false) {
   statusEl.style.color = isError ? '#dc2626' : '#2563eb';
 }
 
+function createCell(text) {
+  const cell = document.createElement('td');
+  cell.textContent = text;
+  return cell;
+}
+
 function renderTableRows(container, rows, renderer) {
-  container.innerHTML = '';
+  container.replaceChildren();
   rows.forEach(row => container.appendChild(renderer(row)));
 }
 
 function renderUsers(users) {
   renderTableRows(userTableBody, users, user => {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${user.uid}</td>
-      <td>${user.name}</td>
-      <td>₹${user.balance.toFixed(2)}</td>
-      <td>₹${user.credit.toFixed(2)}</td>
-    `;
+    row.appendChild(createCell(user.uid));
+    row.appendChild(createCell(user.name));
+    row.appendChild(createCell(`₹${user.balance.toFixed(2)}`));
+    row.appendChild(createCell(`₹${user.credit.toFixed(2)}`));
     return row;
   });
 }
@@ -55,17 +61,15 @@ function renderUsers(users) {
 function renderMenus(menus) {
   renderTableRows(menuTableBody, menus, menu => {
     const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${menu.name}</td>
-      <td>₹${menu.price.toFixed(2)}</td>
-      <td>${menu.quantity}</td>
-    `;
+    row.appendChild(createCell(menu.name));
+    row.appendChild(createCell(`₹${menu.price.toFixed(2)}`));
+    row.appendChild(createCell(String(menu.quantity)));
     return row;
   });
 }
 
 function renderOrders(orders) {
-  ordersContainer.innerHTML = '';
+  ordersContainer.replaceChildren();
   if (!orders.length) {
     ordersContainer.textContent = 'No active orders yet.';
     return;
@@ -76,13 +80,21 @@ function renderOrders(orders) {
     const itemsList = order.items
       .map(item => `${item.name} × ${item.quantity}`)
       .join(', ');
-    card.innerHTML = `
-      <strong>Order #${order.id}</strong>
-      <div>User: ${order.userName}</div>
-      <div>Items: ${itemsList}</div>
-      <div>Total: ₹${order.total.toFixed(2)}</div>
-      <div>Status: ${order.status}</div>
-    `;
+    const title = document.createElement('strong');
+    title.textContent = `Order #${order.id}`;
+    const userLine = document.createElement('div');
+    userLine.textContent = `User: ${order.userName}`;
+    const itemsLine = document.createElement('div');
+    itemsLine.textContent = `Items: ${itemsList}`;
+    const totalLine = document.createElement('div');
+    totalLine.textContent = `Total: ₹${order.total.toFixed(2)}`;
+    const statusLine = document.createElement('div');
+    statusLine.textContent = `Status: ${order.status}`;
+    card.appendChild(title);
+    card.appendChild(userLine);
+    card.appendChild(itemsLine);
+    card.appendChild(totalLine);
+    card.appendChild(statusLine);
     if (order.status === 'placed') {
       const actions = document.createElement('div');
       actions.className = 'order-actions';

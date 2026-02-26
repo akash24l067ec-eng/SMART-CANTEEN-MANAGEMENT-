@@ -57,6 +57,14 @@ function sendText(res, statusCode, message) {
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
     const contentLength = Number(req.headers['content-length']);
+    const hasChunkedEncoding = req.headers['transfer-encoding'] === 'chunked';
+    if (!Number.isFinite(contentLength) && !hasChunkedEncoding) {
+      const error = new Error('Content-Length required');
+      error.statusCode = 411;
+      reject(error);
+      req.destroy();
+      return;
+    }
     if (Number.isFinite(contentLength) && contentLength > MAX_PAYLOAD_SIZE) {
       const error = new Error('Payload too large');
       error.statusCode = 413;
@@ -64,22 +72,25 @@ function parseJsonBody(req) {
       req.destroy();
       return;
     }
-    let body = '';
+    const chunks = [];
+    let size = 0;
     req.on('data', chunk => {
-      body += chunk;
-      if (body.length > MAX_PAYLOAD_SIZE) {
+      size += chunk.length;
+      if (size > MAX_PAYLOAD_SIZE) {
         const error = new Error('Payload too large');
         error.statusCode = 413;
         reject(error);
         req.destroy();
       }
+      chunks.push(chunk);
     });
     req.on('end', () => {
-      if (!body) {
+      if (!chunks.length) {
         resolve({});
         return;
       }
       try {
+        const body = Buffer.concat(chunks).toString();
         resolve(JSON.parse(body));
       } catch (error) {
         reject(error);
@@ -225,7 +236,7 @@ function handleVerify(req, res) {
       }
       const user = data.users.find(entry => entry.uid === uid);
       if (!user) {
-        sendJson(res, 200, { access: false, message: 'Access denied' });
+        sendJson(res, 403, { access: false, message: 'Access denied' });
         return;
       }
       sendJson(res, 200, {
@@ -363,7 +374,13 @@ function getContentType(filePath) {
 
 function serveStatic(req, res, pathname) {
   const safePath = pathname === '/' ? '/index.html' : pathname;
-  const decoded = decodeURIComponent(safePath);
+  let decoded = safePath;
+  try {
+    decoded = decodeURIComponent(safePath);
+  } catch (error) {
+    sendText(res, 400, 'Invalid URL encoding');
+    return;
+  }
   const resolvedBase = path.resolve(publicDir);
   const resolvedPath = path.resolve(resolvedBase, `.${decoded}`);
   const relative = path.relative(resolvedBase, resolvedPath);
