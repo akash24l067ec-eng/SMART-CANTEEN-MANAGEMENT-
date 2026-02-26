@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Smart Canteen Management</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#f0f2f5;color:#222;min-height:100vh}
+header{background:#1565c0;color:#fff;padding:12px 20px;display:flex;align-items:center;gap:10px}
+header svg{flex-shrink:0}
+header h1{font-size:1.25em;font-weight:700}
+nav{background:#fff;border-bottom:2px solid #e0e0e0;display:flex;padding:0 16px}
+.tab{padding:12px 20px;cursor:pointer;border-bottom:3px solid transparent;font-weight:600;color:#666;font-size:.9em;transition:color .15s,border-color .15s}
+.tab:hover{color:#1565c0}
+.tab.active{color:#1565c0;border-bottom-color:#1565c0}
+.content{display:none;padding:20px;max-width:1100px;margin:0 auto}
+.content.active{display:block}
+.card{background:#fff;border-radius:8px;padding:20px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+h2{font-size:1em;font-weight:700;margin-bottom:14px;color:#1565c0;text-transform:uppercase;letter-spacing:.04em}
+table{width:100%;border-collapse:collapse;font-size:.88em}
+th{background:#f5f7fa;padding:9px 10px;text-align:left;border-bottom:2px solid #dde3eb;white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafbfd}
+.btn{padding:6px 14px;border:none;border-radius:5px;cursor:pointer;font-size:.82em;font-weight:600;transition:background .15s;display:inline-flex;align-items:center;gap:4px}
+.btn-primary{background:#1565c0;color:#fff}.btn-primary:hover{background:#0d47a1}
+.btn-danger{background:#c62828;color:#fff}.btn-danger:hover{background:#8b0000}
+.btn-success{background:#2e7d32;color:#fff}.btn-success:hover{background:#1b5e20}
+.btn-warning{background:#e65100;color:#fff}.btn-warning:hover{background:#bf360c}
+.btn-sm{padding:4px 10px;font-size:.78em}
+.form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.field{flex:1;min-width:130px}
+label{font-size:.8em;font-weight:600;color:#555;display:block;margin-bottom:4px}
+input{width:100%;padding:8px 10px;border:1px solid #cdd3dc;border-radius:5px;font-size:.88em;outline:none}
+input:focus{border-color:#1565c0;box-shadow:0 0 0 2px rgba(21,101,192,.15)}
+.status-bar{padding:8px 12px;border-radius:5px;margin-bottom:12px;font-size:.85em;display:none}
+.s-ok{background:#e8f5e9;color:#1b5e20;border:1px solid #a5d6a7}
+.s-err{background:#ffebee;color:#b71c1c;border:1px solid #ef9a9a}
+.s-info{background:#e3f2fd;color:#0d47a1;border:1px solid #90caf9}
+code{background:#eceff1;padding:1px 6px;border-radius:3px;font-size:.88em;font-family:monospace}
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:.75em;font-weight:700}
+.b-qty0{background:#ffcdd2;color:#c62828}
+.kitchen-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.live-dot{display:inline-flex;align-items:center;gap:5px;font-size:.8em;font-weight:600;color:#2e7d32}
+.live-dot span{width:8px;height:8px;background:#2e7d32;border-radius:50%;display:inline-block;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.order-card{background:#fff;border-left:4px solid #1565c0;border-radius:6px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.order-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+.order-name{font-weight:700;font-size:1em}
+.order-total{font-size:.9em;color:#555}
+.order-items{background:#f5f7fa;border-radius:4px;padding:8px 10px;font-size:.83em;margin-bottom:10px;line-height:1.7}
+.order-actions{display:flex;gap:8px;flex-wrap:wrap}
+.no-orders{text-align:center;padding:40px;color:#9e9e9e;font-size:.95em}
+</style>
+</head>
+<body>
+
+<header>
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="5" rx="1"/><rect x="3" y="10" width="18" height="11" rx="1"/>
+    <line x1="8" y1="10" x2="8" y2="21"/><line x1="16" y1="10" x2="16" y2="21"/>
+  </svg>
+  <h1>Smart Canteen Management System</h1>
+</header>
+
+<nav>
+  <div class="tab active" onclick="showTab('users')">&#128100; Users</div>
+  <div class="tab"        onclick="showTab('menu')">&#127869; Menu</div>
+  <div class="tab"        onclick="showTab('kitchen')">&#128104;&#8205;&#127859; Kitchen Panel</div>
+</nav>
+
+<!-- ══════════════════  USERS TAB  ══════════════════ -->
+<div id="tab-users" class="content active">
+
+  <div class="card">
+    <h2>&#10133; Add New User</h2>
+    <div id="user-msg" class="status-bar"></div>
+    <form onsubmit="addUser(event)">
+      <div class="form-row">
+        <div class="field">
+          <label>RFID UID</label>
+          <input id="u-uid" placeholder="e.g. A1B2C3D4" required maxlength="19" autocomplete="off" style="text-transform:uppercase">
+        </div>
+        <div class="field">
+          <label>Full Name</label>
+          <input id="u-name" placeholder="e.g. John Doe" required maxlength="29">
+        </div>
+        <div class="field">
+          <label>Initial Balance (Rs.)</label>
+          <input id="u-bal" type="number" step="0.01" min="0" value="0" placeholder="0.00">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button type="submit" class="btn btn-primary">&#10003; Add User</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>&#128101; Registered Users</h2>
+    <table>
+      <thead><tr><th>#</th><th>UID</th><th>Name</th><th>Balance</th><th>Action</th></tr></thead>
+      <tbody id="users-body"><tr><td colspan="5" style="text-align:center;color:#9e9e9e;padding:20px">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ══════════════════  MENU TAB  ══════════════════ -->
+<div id="tab-menu" class="content">
+
+  <div class="card">
+    <h2>&#10133; Add Menu Item</h2>
+    <div id="menu-msg" class="status-bar"></div>
+    <form onsubmit="addMenuItem(event)">
+      <div class="form-row">
+        <div class="field">
+          <label>Item Name</label>
+          <input id="m-name" placeholder="e.g. Chicken Rice" required maxlength="29">
+        </div>
+        <div class="field">
+          <label>Price (Rs.)</label>
+          <input id="m-price" type="number" step="0.01" min="0" placeholder="0.00" required>
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input id="m-qty" type="number" step="1" min="1" placeholder="10" required>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button type="submit" class="btn btn-primary">&#10003; Add Item</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>&#127869; Menu Items</h2>
+    <table>
+      <thead><tr><th>#</th><th>Name</th><th>Price</th><th>Quantity</th><th>Action</th></tr></thead>
+      <tbody id="menu-body"><tr><td colspan="5" style="text-align:center;color:#9e9e9e;padding:20px">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ══════════════════  KITCHEN PANEL TAB  ══════════════════ -->
+<div id="tab-kitchen" class="content">
+
+  <div class="kitchen-hdr">
+    <h2 style="margin:0">&#128276; Kitchen Panel — Pending Orders</h2>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="live-dot"><span></span>Live (auto-refresh)</div>
+      <button class="btn btn-primary btn-sm" onclick="loadOrders()">&#8635; Refresh</button>
+    </div>
+  </div>
+  <div id="kitchen-msg" class="status-bar"></div>
+  <div id="orders-container"><div class="no-orders">No pending orders</div></div>
+
+</div>
+
+<script>
+/* ────────────────────────────────────────────────────────────────────────────
+   Utilities
+   ──────────────────────────────────────────────────────────────────────────── */
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function showMsg(id, text, type){
+  var el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'status-bar s-' + type;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.style.display='none'; }, 4500);
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Audio — plays a "ready" chime through the browser speaker
+   ──────────────────────────────────────────────────────────────────────────── */
+var _audioCtx = null;
+function getAudio(){ if(!_audioCtx) _audioCtx = new (window.AudioContext||window.webkitAudioContext)(); return _audioCtx; }
+
+function playReadyChime(){
+  try{
+    var ctx = getAudio();
+    // Resume context if suspended (browser autoplay policy)
+    if(ctx.state === 'suspended') ctx.resume();
+    var notes = [880,1100,1320,1100,880,1320];
+    var t = ctx.currentTime;
+    notes.forEach(function(freq){
+      var osc  = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.35, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      osc.start(t); osc.stop(t + 0.22);
+      t += 0.18;
+    });
+  }catch(e){}
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Tab switching
+   ──────────────────────────────────────────────────────────────────────────── */
+var _pollTimer = null;
+var KITCHEN_POLL_MS = 3000;  // kitchen panel auto-refresh interval (ms)
+
+function showTab(tab){
+  var tabs    = ['users','menu','kitchen'];
+  var tabEls  = document.querySelectorAll('.tab');
+  tabEls.forEach(function(el,i){ el.classList.toggle('active', tabs[i]===tab); });
+  tabs.forEach(function(t){ document.getElementById('tab-'+t).classList.toggle('active', t===tab); });
+
+  clearInterval(_pollTimer); _pollTimer = null;
+
+  if(tab==='users')   loadUsers();
+  if(tab==='menu')    loadMenu();
+  if(tab==='kitchen'){
+    loadOrders();
+    _pollTimer = setInterval(loadOrders, KITCHEN_POLL_MS);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   USERS
+   ──────────────────────────────────────────────────────────────────────────── */
+function loadUsers(){
+  fetch('/api/users').then(function(r){ return r.json(); }).then(function(users){
+    var tb = document.getElementById('users-body');
+    if(!users.length){
+      tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#9e9e9e;padding:20px">No users registered yet</td></tr>';
+      return;
+    }
+    tb.innerHTML = users.map(function(u,i){
+      return '<tr>'
+        +'<td>'+(i+1)+'</td>'
+        +'<td><code>'+esc(u.uid)+'</code></td>'
+        +'<td>'+esc(u.name)+'</td>'
+        +'<td><strong>Rs.&nbsp;'+parseFloat(u.balance).toFixed(2)+'</strong></td>'
+        +'<td><button class="btn btn-danger btn-sm" onclick="deleteUser(\''+esc(u.uid)+'\')">&#10005; Delete</button></td>'
+        +'</tr>';
+    }).join('');
+  }).catch(function(){ showMsg('user-msg','Could not reach device','err'); });
+}
+
+function addUser(e){
+  e.preventDefault();
+  var uid  = document.getElementById('u-uid').value.trim().toUpperCase();
+  var name = document.getElementById('u-name').value.trim();
+  var bal  = parseFloat(document.getElementById('u-bal').value)||0;
+  fetch('/api/users',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({uid:uid, name:name, balance:bal})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      showMsg('user-msg','User "'+esc(name)+'" added successfully!','ok');
+      document.getElementById('u-uid').value='';
+      document.getElementById('u-name').value='';
+      document.getElementById('u-bal').value='0';
+      loadUsers();
+    } else {
+      showMsg('user-msg','Error: '+(d.error||'Unknown error'),'err');
+    }
+  }).catch(function(){ showMsg('user-msg','Connection error','err'); });
+}
+
+function deleteUser(uid){
+  if(!confirm('Delete user with UID: '+uid+'?\nThis cannot be undone.')) return;
+  fetch('/api/users?uid='+encodeURIComponent(uid),{method:'DELETE'})
+    .then(function(r){ return r.json(); }).then(function(d){
+      if(d.success){ showMsg('user-msg','User deleted','info'); loadUsers(); }
+      else showMsg('user-msg','Error: '+(d.error||'Unknown'),'err');
+    }).catch(function(){ showMsg('user-msg','Connection error','err'); });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   MENU
+   ──────────────────────────────────────────────────────────────────────────── */
+function loadMenu(){
+  fetch('/api/menu').then(function(r){ return r.json(); }).then(function(items){
+    var tb = document.getElementById('menu-body');
+    if(!items.length){
+      tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:#9e9e9e;padding:20px">No menu items added yet</td></tr>';
+      return;
+    }
+    tb.innerHTML = items.map(function(m,i){
+      var qtyHtml = m.quantity > 0
+        ? m.quantity
+        : '<span class="badge b-qty0">Out of stock</span>';
+      return '<tr>'
+        +'<td>'+(i+1)+'</td>'
+        +'<td>'+esc(m.name)+'</td>'
+        +'<td><strong>Rs.&nbsp;'+parseFloat(m.price).toFixed(2)+'</strong></td>'
+        +'<td>'+qtyHtml+'</td>'
+        +'<td><button class="btn btn-danger btn-sm" onclick="deleteMenuItem('+m.id+')">&#10005; Delete</button></td>'
+        +'</tr>';
+    }).join('');
+  }).catch(function(){ showMsg('menu-msg','Could not reach device','err'); });
+}
+
+function addMenuItem(e){
+  e.preventDefault();
+  var name  = document.getElementById('m-name').value.trim();
+  var price = parseFloat(document.getElementById('m-price').value);
+  var qty   = parseInt(document.getElementById('m-qty').value,10);
+  fetch('/api/menu',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name:name, price:price, quantity:qty})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      showMsg('menu-msg','Menu item "'+esc(name)+'" added!','ok');
+      document.getElementById('m-name').value='';
+      document.getElementById('m-price').value='';
+      document.getElementById('m-qty').value='';
+      loadMenu();
+    } else {
+      showMsg('menu-msg','Error: '+(d.error||'Unknown'),'err');
+    }
+  }).catch(function(){ showMsg('menu-msg','Connection error','err'); });
+}
+
+function deleteMenuItem(id){
+  if(!confirm('Delete this menu item?')) return;
+  fetch('/api/menu?id='+id,{method:'DELETE'})
+    .then(function(r){ return r.json(); }).then(function(d){
+      if(d.success){ showMsg('menu-msg','Item deleted','info'); loadMenu(); }
+      else showMsg('menu-msg','Error: '+(d.error||'Unknown'),'err');
+    }).catch(function(){ showMsg('menu-msg','Connection error','err'); });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   KITCHEN PANEL
+   ──────────────────────────────────────────────────────────────────────────── */
+function loadOrders(){
+  fetch('/api/orders').then(function(r){ return r.json(); }).then(function(orders){
+    var cont = document.getElementById('orders-container');
+    if(!orders.length){
+      cont.innerHTML='<div class="no-orders">&#9989; No pending orders — kitchen is clear!</div>';
+      return;
+    }
+    cont.innerHTML = orders.map(function(o){
+      var itemsHtml = o.items.map(function(it){
+        return '&bull; '+esc(it.name)+' &times; '+it.qty
+               +' &nbsp;@&nbsp; Rs.'+parseFloat(it.price).toFixed(2)
+               +' = <strong>Rs.'+( (it.qty * it.price).toFixed(2) )+'</strong>';
+      }).join('<br>');
+      return '<div class="order-card" id="order-'+o.id+'">'
+        +'<div class="order-top">'
+        +'<div>'
+        +'<div class="order-name">&#128100; '+esc(o.userName)+'</div>'
+        +'<div style="font-size:.78em;color:#777;margin-top:2px">UID: <code>'+esc(o.userUid)+'</code> &nbsp;|&nbsp; Order #'+o.id+'</div>'
+        +'</div>'
+        +'<div class="order-total">Total: <strong style="font-size:1.1em">Rs.'+parseFloat(o.total).toFixed(2)+'</strong></div>'
+        +'</div>'
+        +'<div class="order-items">'+itemsHtml+'</div>'
+        +'<div class="order-actions">'
+        +'<button class="btn btn-success" onclick="markReady('+o.id+')">&#10003; Ready — Notify Customer</button>'
+        +'<button class="btn btn-warning" onclick="cancelOrder('+o.id+')">&#10005; Cancel &amp; Refund</button>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+function markReady(id){
+  fetch('/api/orders/ready',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id:id})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      playReadyChime();
+      showMsg('kitchen-msg','&#127834; Order #'+id+' marked ready — customer notified!','ok');
+      var card = document.getElementById('order-'+id);
+      if(card){ card.style.opacity='0.4'; card.style.pointerEvents='none'; }
+      setTimeout(loadOrders, 1200);
+    } else {
+      showMsg('kitchen-msg','Error: '+(d.error||'Unknown'),'err');
+    }
+  }).catch(function(){ showMsg('kitchen-msg','Connection error','err'); });
+}
+
+function cancelOrder(id){
+  if(!confirm('Cancel order #'+id+' and refund the customer?')) return;
+  fetch('/api/orders/cancel',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({id:id})
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.success){
+      showMsg('kitchen-msg','Order #'+id+' cancelled and balance refunded.','info');
+      loadOrders();
+    } else {
+      showMsg('kitchen-msg','Error: '+(d.error||'Unknown'),'err');
+    }
+  }).catch(function(){ showMsg('kitchen-msg','Connection error','err'); });
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Boot
+   ──────────────────────────────────────────────────────────────────────────── */
+// Show WiFi/IP status in header
+fetch('/api/status').then(function(r){ return r.json(); }).then(function(s){
+  var hdr = document.querySelector('header h1');
+  if(s.wifi){
+    hdr.insertAdjacentHTML('afterend',
+      '<span style="font-size:.72em;opacity:.85;margin-left:12px">&#128246; '+esc(s.ip)+'</span>');
+  }
+}).catch(function(){});
+
+loadUsers();
+</script>
+</body>
+</html>
