@@ -46,6 +46,7 @@ constexpr int MENU_COUNT = sizeof(menuItems) / sizeof(menuItems[0]);
 
 constexpr int MAX_CART_SIZE = 6;
 constexpr int MAX_QTY_DIGITS = 2;
+constexpr unsigned long FEEDBACK_DELAY_MS = 1200;
 
 struct CartItem {
   int menuIndex;
@@ -132,6 +133,7 @@ void checkForCard() {
   }
   String uid = "";
   int reserveSize = rfid.uid.size > 0 ? rfid.uid.size * 3 - 1 : 0;
+  // 2 hex chars + 1 colon separator per byte, minus 1 for no trailing colon.
   uid.reserve(reserveSize);
   for (byte i = 0; i < rfid.uid.size; i++) {
     if (i > 0) {
@@ -160,7 +162,7 @@ void checkForCard() {
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Access denied");
-    delay(1200);
+    delay(FEEDBACK_DELAY_MS);
     enterWaitCard();
   }
 }
@@ -313,12 +315,12 @@ void placeOrder() {
     lcd.setCursor(0, 0);
     lcd.print("Order placed!");
     cartCount = 0;
-    delay(1200);
+    delay(FEEDBACK_DELAY_MS);
     enterWaitCard();
   } else {
     lcd.setCursor(0, 0);
     lcd.print("Order failed");
-    delay(1200);
+    delay(FEEDBACK_DELAY_MS);
     showMenuItem();
     state = MENU_BROWSE;
   }

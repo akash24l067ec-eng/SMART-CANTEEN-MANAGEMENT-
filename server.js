@@ -59,7 +59,7 @@ function parseJsonBody(req) {
     const contentLength = Number(req.headers['content-length']);
     const hasChunkedEncoding = req.headers['transfer-encoding'] === 'chunked';
     if (!Number.isFinite(contentLength) && !hasChunkedEncoding) {
-      const error = new Error('Content-Length required');
+      const error = new Error('Content-Length or chunked encoding required');
       error.statusCode = 411;
       reject(error);
       req.destroy();
@@ -81,6 +81,7 @@ function parseJsonBody(req) {
         error.statusCode = 413;
         reject(error);
         req.destroy();
+        chunks.length = 0;
         return;
       }
       chunks.push(chunk);
