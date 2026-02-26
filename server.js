@@ -30,9 +30,17 @@ function loadData() {
 }
 
 let data = loadData();
+let saveQueue = Promise.resolve();
 
 function saveData() {
-  fs.writeFileSync(dataFile, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+  const payload = `${JSON.stringify(data, null, 2)}\n`;
+  const tempFile = `${dataFile}.tmp`;
+  saveQueue = saveQueue
+    .then(() => fs.promises.writeFile(tempFile, payload, 'utf8'))
+    .then(() => fs.promises.rename(tempFile, dataFile))
+    .catch(error => {
+      console.error('Failed to save data', error);
+    });
 }
 
 function sendJson(res, statusCode, payload) {
@@ -47,11 +55,21 @@ function sendText(res, statusCode, message) {
 
 function parseJsonBody(req) {
   return new Promise((resolve, reject) => {
+    const contentLength = Number(req.headers['content-length']);
+    if (Number.isFinite(contentLength) && contentLength > 1e6) {
+      const error = new Error('Payload too large');
+      error.statusCode = 413;
+      reject(error);
+      req.destroy();
+      return;
+    }
     let body = '';
     req.on('data', chunk => {
       body += chunk;
       if (body.length > 1e6) {
-        reject(new Error('Payload too large'));
+        const error = new Error('Payload too large');
+        error.statusCode = 413;
+        reject(error);
         req.destroy();
       }
     });
@@ -71,6 +89,14 @@ function parseJsonBody(req) {
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function normalizeUid(value) {
+  if (!isNonEmptyString(value)) {
+    return null;
+  }
+  const normalized = value.replace(/[^a-fA-F0-9]/g, '').toUpperCase();
+  return normalized.length ? normalized : null;
 }
 
 function toNumber(value, fallback = 0) {
@@ -119,7 +145,7 @@ function handleUsers(req, res) {
   if (req.method === 'POST') {
     parseJsonBody(req)
       .then(body => {
-        const uid = isNonEmptyString(body.uid) ? body.uid.trim() : null;
+        const uid = normalizeUid(body.uid);
         const name = isNonEmptyString(body.name) ? body.name.trim() : null;
         if (!uid || !name) {
           sendJson(res, 400, { error: 'uid and name are required' });
@@ -139,7 +165,11 @@ function handleUsers(req, res) {
         saveData();
         sendJson(res, 201, user);
       })
-      .catch(() => sendJson(res, 400, { error: 'Invalid JSON payload' }));
+      .catch(error =>
+        sendJson(res, error.statusCode || 400, {
+          error: error.statusCode ? error.message : 'Invalid JSON payload',
+        })
+      );
     return;
   }
   sendText(res, 405, 'Method Not Allowed');
@@ -170,7 +200,11 @@ function handleMenus(req, res) {
         saveData();
         sendJson(res, 201, menuItem);
       })
-      .catch(() => sendJson(res, 400, { error: 'Invalid JSON payload' }));
+      .catch(error =>
+        sendJson(res, error.statusCode || 400, {
+          error: error.statusCode ? error.message : 'Invalid JSON payload',
+        })
+      );
     return;
   }
   sendText(res, 405, 'Method Not Allowed');
@@ -183,7 +217,7 @@ function handleVerify(req, res) {
   }
   parseJsonBody(req)
     .then(body => {
-      const uid = isNonEmptyString(body.uid) ? body.uid.trim() : null;
+      const uid = normalizeUid(body.uid);
       if (!uid) {
         sendJson(res, 400, { error: 'uid is required' });
         return;
@@ -199,7 +233,11 @@ function handleVerify(req, res) {
         menus: data.menus,
       });
     })
-    .catch(() => sendJson(res, 400, { error: 'Invalid JSON payload' }));
+    .catch(error =>
+      sendJson(res, error.statusCode || 400, {
+        error: error.statusCode ? error.message : 'Invalid JSON payload',
+      })
+    );
 }
 
 function handleOrders(req, res) {
@@ -210,7 +248,7 @@ function handleOrders(req, res) {
   if (req.method === 'POST') {
     parseJsonBody(req)
       .then(body => {
-        const uid = isNonEmptyString(body.uid) ? body.uid.trim() : null;
+        const uid = normalizeUid(body.uid);
         const items = Array.isArray(body.items) ? body.items : [];
         const user = data.users.find(entry => entry.uid === uid);
         if (!uid || !user) {
@@ -233,8 +271,16 @@ function handleOrders(req, res) {
           sendJson(res, 400, { error: 'Insufficient balance' });
           return;
         }
-        enrichedItems.forEach(item => {
+        const menuEntries = [];
+        for (const item of enrichedItems) {
           const menu = findMenu(item.menuId);
+          if (!menu) {
+            sendJson(res, 400, { error: 'Menu item no longer available' });
+            return;
+          }
+          menuEntries.push({ item, menu });
+        }
+        menuEntries.forEach(({ item, menu }) => {
           menu.quantity -= item.quantity;
         });
         user.balance -= total;
@@ -251,7 +297,11 @@ function handleOrders(req, res) {
         saveData();
         sendJson(res, 201, order);
       })
-      .catch(() => sendJson(res, 400, { error: 'Invalid JSON payload' }));
+      .catch(error =>
+        sendJson(res, error.statusCode || 400, {
+          error: error.statusCode ? error.message : 'Invalid JSON payload',
+        })
+      );
     return;
   }
   sendText(res, 405, 'Method Not Allowed');
@@ -266,6 +316,7 @@ function handleOrderAction(req, res, orderId, action) {
   if (action === 'ready') {
     order.status = 'ready';
   } else if (action === 'cancel') {
+    const restockMissing = [];
     if (order.status !== 'cancelled') {
       const user = data.users.find(entry => entry.uid === order.uid);
       if (user) {
@@ -275,10 +326,15 @@ function handleOrderAction(req, res, orderId, action) {
         const menu = findMenu(item.menuId);
         if (menu) {
           menu.quantity += item.quantity;
+        } else {
+          restockMissing.push(item.name);
         }
       });
     }
     order.status = 'cancelled';
+    if (restockMissing.length) {
+      order.restockMissing = restockMissing;
+    }
   }
   saveData();
   sendJson(res, 200, order);
@@ -307,17 +363,19 @@ function getContentType(filePath) {
 function serveStatic(req, res, pathname) {
   const safePath = pathname === '/' ? '/index.html' : pathname;
   const decoded = decodeURIComponent(safePath);
-  const filePath = path.join(publicDir, decoded);
-  if (!filePath.startsWith(publicDir)) {
+  const resolvedBase = path.resolve(publicDir);
+  const resolvedPath = path.resolve(resolvedBase, `.${decoded}`);
+  const relative = path.relative(resolvedBase, resolvedPath);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
     sendText(res, 400, 'Invalid path');
     return;
   }
-  fs.readFile(filePath, (err, content) => {
+  fs.readFile(resolvedPath, (err, content) => {
     if (err) {
       sendText(res, 404, 'Not Found');
       return;
     }
-    res.writeHead(200, { 'Content-Type': getContentType(filePath) });
+    res.writeHead(200, { 'Content-Type': getContentType(resolvedPath) });
     res.end(content);
   });
 }

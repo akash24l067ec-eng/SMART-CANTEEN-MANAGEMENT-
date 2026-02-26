@@ -1,5 +1,5 @@
 {
-  "name": "smart-canteen-management-",
+  "name": "smart-canteen-management",
   "version": "1.0.0",
   "description": "Smart canteen management server and dashboard",
   "main": "server.js",

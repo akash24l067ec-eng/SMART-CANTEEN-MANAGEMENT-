@@ -44,12 +44,15 @@ MenuItem menuItems[] = {
 
 constexpr int MENU_COUNT = sizeof(menuItems) / sizeof(menuItems[0]);
 
+constexpr int MAX_CART_SIZE = 6;
+constexpr int MAX_QTY_DIGITS = 2;
+
 struct CartItem {
   int menuIndex;
   int quantity;
 };
 
-CartItem cart[6];
+CartItem cart[MAX_CART_SIZE];
 int cartCount = 0;
 
 enum ScreenState { SHOW_TITLE, WAIT_CARD, MENU_BROWSE, QTY_SELECT, VIEW_CART };
@@ -129,6 +132,9 @@ void checkForCard() {
   }
   String uid = "";
   for (byte i = 0; i < rfid.uid.size; i++) {
+    if (i > 0) {
+      uid += ":";
+    }
     if (rfid.uid.uidByte[i] < 0x10) {
       uid += "0";
     }
@@ -202,7 +208,7 @@ void handleQtyKeys() {
     return;
   }
   if (key >= '0' && key <= '9') {
-    if (qtyInput.length() < 2) {
+    if (qtyInput.length() < MAX_QTY_DIGITS) {
       qtyInput += key;
       lcd.clear();
       lcd.setCursor(0, 0);
@@ -263,7 +269,7 @@ void addToCart(int menuIndex, int quantity) {
       return;
     }
   }
-  if (cartCount < 6) {
+  if (cartCount < MAX_CART_SIZE) {
     cart[cartCount] = { menuIndex, quantity };
     cartCount++;
   }
