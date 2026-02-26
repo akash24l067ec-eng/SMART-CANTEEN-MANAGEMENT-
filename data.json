@@ -1,0 +1,27 @@
+{
+  "users": [
+    {
+      "uid": "04A1B2C3",
+      "name": "Aisha",
+      "balance": 500,
+      "credit": 0
+    }
+  ],
+  "menus": [
+    {
+      "id": 1,
+      "name": "Veg Sandwich",
+      "price": 50,
+      "quantity": 20
+    },
+    {
+      "id": 2,
+      "name": "Fruit Bowl",
+      "price": 40,
+      "quantity": 15
+    }
+  ],
+  "orders": [],
+  "nextOrderId": 1,
+  "nextMenuId": 3
+}

@@ -1,0 +1,22 @@
+{
+  "name": "smart-canteen-management-",
+  "version": "1.0.0",
+  "description": "Smart canteen management server and dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"No tests configured\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akash24l067ec-eng/SMART-CANTEEN-MANAGEMENT-.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/akash24l067ec-eng/SMART-CANTEEN-MANAGEMENT-/issues"
+  },
+  "homepage": "https://github.com/akash24l067ec-eng/SMART-CANTEEN-MANAGEMENT-#readme"
+}
